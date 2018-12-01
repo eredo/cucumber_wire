@@ -2,64 +2,134 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'message.dart';
+import 'package:cli_util/cli_logging.dart';
+
+import 'configuration.dart';
+import 'wire_server.dart';
 import 'isolate_handler.dart';
+import 'message.dart';
 
-/// Server implementation which opens a TCP socket, transforms the messages
-/// received through the socket into a [WireMessage] representation and emits these
-/// in [onMessage]. Within the server setup, these messages are than forwarded
-/// to the step definition file using the [IsolateHandler].
-class WireServer implements Sink<WireMessage> {
-  final _messages = StreamController<WireMessage>.broadcast();
-  final _input = StreamController<WireMessage>.broadcast();
+/// The bridge between the wire server that handles the connection of the
+/// cucumber cli and the dart step definition file which is started in an
+/// isolate.
+/// The server is called by the `cucumber_wire` cli but can also be used using
+/// the API. This can be necessary in the future for debugging purposes.
+class Server {
+  final _complete = Completer<void>();
+  final Configuration configuration;
+  Logger _logger;
 
-  final String address;
-  final int port;
+  WireServer _server;
+  IsolateHandler _isolate;
 
-  ServerSocket _serverSocket;
+  StreamSubscription<Null> _isolateStartListener;
+  StreamSubscription<ProcessSignal> _signalListener;
 
-  Stream<WireMessage> get onMessage => _messages.stream;
+  Process _cucumberRunner;
 
-  WireServer({this.address = '0.0.0.0', this.port = 9090});
+  Server(this.configuration, {Logger logger}) {
+    _server = WireServer(
+      address: configuration.hostname,
+      port: configuration.port,
+    );
 
-  Future<WireServer> start() {
-    return ServerSocket.bind(address, port).then((serverSocket) {
-      _serverSocket = serverSocket;
-
-      serverSocket.listen(
-        (socket) {
-          // Handles the input stream which is used to send message through the
-          // socket. This is closed when the socket disconnects.
-          StreamSubscription<List<int>> inputListener;
-
-          socket
-              .transform(utf8.decoder)
-              .where((s) => s.isNotEmpty && s[0] == '[')
-              .map(parse)
-              .listen((msg) {
-            _messages.add(msg);
-          }, onDone: () {
-            inputListener.cancel();
-            inputListener = null;
-          });
-
-          inputListener = _input.stream
-              .map((m) => m.encode())
-              .map(json.encode)
-              .map((r) => '$r\n')
-              .transform(utf8.encoder)
-              .listen((d) async {
-            socket.add(d);
-            await socket.flush();
-          });
-        },
-        cancelOnError: false,
-      );
-    });
+    _logger = logger ??
+        (configuration.verbose ? Logger.verbose() : Logger.standard());
   }
 
-  Future<void> close() => _serverSocket.close();
+  /// Starts the components of the server and completes when the step definition
+  /// isolate is started successfully for the first time.
+  Future<void> start() async {
+    // Start the isolate and wait for a first successful start.
+    _isolate = IsolateHandler(
+      Uri.parse(configuration.entryPoint),
+      watch: configuration.liveReload,
+    );
+    await _isolate.onStart.first;
+    _logger.stdout('Step definitions loaded.');
 
-  @override
-  void add(WireMessage data) => _input.add(data);
+    // Forward message from WireServer to IsolateHandler
+    if (configuration.verbose) {
+      _server.onMessage.listen(_logMessage('input'));
+      _isolate.onMessage.listen(_logMessage('output'));
+    }
+
+    _server.onMessage.listen(_isolate.add, onError: (err, stack) {
+      _logger.stderr('Error within wire server: $err\nStacktrace: $stack');
+    });
+    _isolate.onMessage.listen(_server.add, onError: (err, stack) {
+      _logger.stderr('Error within isolate: $err\nStacktrace: $stack');
+    });
+
+    // Start the server.
+    await _server.start();
+    _logger.stdout('Server running: ${_server.address}:${_server.port}');
+
+    if (configuration.runCucumber) {
+      _isolateStartListener = _isolate.onStart.listen((_) => _runCucumber());
+      _runCucumber();
+    }
+  }
+
+  /// Stops the server including all components.
+  Future<void> close() async {
+    Exception ex;
+    StackTrace trace;
+
+    try {
+      await _server.close();
+    } catch (e, s) {
+      ex = e;
+      trace = s;
+    }
+
+    try {
+      _isolate.close();
+
+      await _isolateStartListener?.cancel();
+      await _signalListener?.cancel();
+    } catch (e, s) {
+      ex = e;
+      trace = s;
+    }
+
+    if (ex != null) {
+      _complete.completeError(ex, trace);
+    } else {
+      _complete.complete();
+    }
+  }
+
+  /// Fulfills when the server is closed, this may either occur when [close] is
+  /// called or the server received a sigterm signal after using [bind] to listen
+  /// for process signals.
+  Future get complete => _complete.future;
+
+  /// Binds the server to the process signals and detects sigterm to shutdown
+  /// the serer.
+  void bind() {
+    _signalListener = ProcessSignal.sigterm.watch().listen((_) => close());
+  }
+
+  void _runCucumber() async {
+    if (_cucumberRunner != null) {
+      _logger.stdout('Stopping current cucumber execution.');
+      _cucumberRunner.kill();
+    }
+
+    _cucumberRunner =
+        await Process.start(configuration.cucumberExecutable, ['-f', 'pretty']);
+
+    _cucumberRunner.stderr.listen(stderr.add);
+    _cucumberRunner.stderr.listen(stdout.add);
+
+    await _cucumberRunner.exitCode;
+    _cucumberRunner = null;
+  }
+
+  void Function(WireMessage msg) _logMessage(String direction) {
+    return (WireMessage msg) {
+      _logger.trace('Message [$direction]: ${json.encode(msg.encode())}');
+    };
+  }
 }

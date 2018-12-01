@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
-import 'package:cucumber_wire/src/server/server.dart';
+import 'package:cucumber_wire/src/server/wire_server.dart';
 import 'package:cucumber_wire/src/server/message.dart';
 
 void main() {

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:watcher/watcher.dart';
-import 'package:path/path.dart' as path;
+import 'package:path/path.dart' as p;
 
 import 'message.dart';
 
@@ -29,7 +29,12 @@ class IsolateHandler implements Sink<WireMessage> {
   /// Port which is sent to the isolate in order to receive messages.
   ReceivePort _receiverPort;
 
-  final Uri _path;
+  final Uri path;
+
+  /// Whether the IsolateHandler should listen for changes of the files used
+  /// within the step definition file. When changes occur in the files the
+  /// isolate will be restarted and a message will be emitted in [onStart].
+  final bool watch;
 
   Isolate _isolate;
 
@@ -40,7 +45,7 @@ class IsolateHandler implements Sink<WireMessage> {
   /// Listener for forwarding messages from [_input.stream] to [_inputPort].
   StreamSubscription<List<int>> _inputListener;
 
-  IsolateHandler(this._path) {
+  IsolateHandler(this.path, {this.watch = false}) {
     _startIsolate();
   }
 
@@ -89,28 +94,25 @@ class IsolateHandler implements Sink<WireMessage> {
   }
 
   void _startIsolate() async {
-    _isolate = await Isolate.spawnUri(_path, [], _setupReceivePort.sendPort);
-    print('isolate started');
+    _isolate = await Isolate.spawnUri(path, [], _setupReceivePort.sendPort);
   }
 
-  void _closeIsolate() async {
+  void _closeIsolate() {
     _inputListener.cancel();
     _receiverPort.close();
     _isolate.kill();
-    print('isolate closed');
   }
 
   void _watchFiles(List<String> files) {
     _start.add(null);
 
-    final directories = Set<String>.from(files.map(path.dirname));
+    final directories = Set<String>.from(files.map(p.dirname));
 
     _watchers
       ..forEach((s) => s.cancel())
       ..clear()
       ..addAll(directories.map((dir) {
         return DirectoryWatcher(dir).events.listen((evt) {
-          print('received change event: ${evt.path} ${evt.type.toString()}');
           _closeIsolate();
           _startIsolate();
         });

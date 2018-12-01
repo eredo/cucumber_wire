@@ -32,6 +32,10 @@ void registerStepDefinitions(SendPort output, List<Type> definitions,
         print('unable to parse message: $ex');
       }
 
+      if (message is BeginScenario) {
+        output.send(utf8.encode(json.encode(ResultMessage.success().encode())));
+      }
+
       if (message is StepMatches) {
         print('lookup step: ${message.nameToMatch}');
 
