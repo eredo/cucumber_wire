@@ -121,7 +121,7 @@ class Server {
         await Process.start(configuration.cucumberExecutable, ['-f', 'pretty']);
 
     _cucumberRunner.stderr.listen(stderr.add);
-    _cucumberRunner.stderr.listen(stdout.add);
+    _cucumberRunner.stdout.listen(stdout.add);
 
     await _cucumberRunner.exitCode;
     _cucumberRunner = null;

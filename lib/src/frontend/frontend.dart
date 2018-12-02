@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:isolate';
 
-import 'package:matcher/matcher.dart';
-
 import '../server/message.dart';
 import 'registry.dart';
 import 'suite_loader.dart';
@@ -95,47 +93,4 @@ void registerStepDefinitions(SendPort output, List<Type> definitions,
       }
     }
   });
-}
-
-class Desc implements Description {
-  final String text;
-
-  Desc(this.text);
-
-  @override
-  Description add(String text) => Desc(this.text + text);
-
-  @override
-  Description addAll(
-          String start, String separator, String end, Iterable list) =>
-      Desc(this.text + start + list.join(separator) + end);
-
-  @override
-  Description addDescriptionOf(value) => Desc(this.text + value.toString());
-
-  @override
-  int get length => text.length;
-
-  @override
-  Description replace(String text) => Desc(text);
-
-  @override
-  String toString() => text;
-}
-
-void expect(dynamic data, dynamic eq) {
-  final desc = Desc('');
-  Matcher matcher;
-  if (eq is Matcher) {
-    matcher = eq;
-  } else {
-    matcher = equals(eq);
-  }
-
-  final matchState = {};
-  final match = matcher.matches(data, matchState);
-  if (!match) {
-    final ndesc = matcher.describeMismatch(data, desc, matchState, false);
-    throw ndesc.toString();
-  }
 }

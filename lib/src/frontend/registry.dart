@@ -4,6 +4,8 @@ abstract class Registry {
   void register(String matcher, FrontendCallback callback);
 
   void registerAfterAll(HookCallback callback);
+
+  void registerBeforeAll(HookCallback callback);
 }
 
 class StepRegistry implements Registry {
@@ -11,6 +13,7 @@ class StepRegistry implements Registry {
   /// value contains the arguments.
   final _steps = <int, Step>{};
   final _afterAll = Set<HookCallback>();
+  final _beforeAll = Set<HookCallback>();
 
   int _id = 0;
 
@@ -35,15 +38,24 @@ class StepRegistry implements Registry {
     return _steps[i].callback(args);
   }
 
-  FutureOr<void> end() async {
-    await Future.wait(_afterAll.map((fn) async {
-      await fn();
-    }));
-  }
+  /// Executes all registered beforeAll functionality.
+  FutureOr<void> start() => Future.wait(_afterAll.map((fn) async {
+        await fn();
+      }));
+
+  /// Executes all registered afterAll functionality.
+  FutureOr<void> end() => Future.wait(_afterAll.map((fn) async {
+        await fn();
+      }));
 
   @override
   void registerAfterAll(HookCallback callback) {
     _afterAll.add(callback);
+  }
+
+  @override
+  void registerBeforeAll(HookCallback callback) {
+    _beforeAll.add(callback);
   }
 }
 

@@ -49,9 +49,14 @@ class SuiteLoader {
       registry.register(matcher, setup(instanceMirror, method));
     }
 
-    if (_hasHookAfterAll(method.metadata)) {
+    if (_hasAnnotation(method.metadata, afterAll)) {
       registry
           .registerAfterAll(() => instanceMirror.invoke(method.simpleName, []));
+    }
+
+    if (_hasAnnotation(method.metadata, beforeAll)) {
+      registry.registerBeforeAll(
+          () => instanceMirror.invoke(method.simpleName, []));
     }
   }
 
@@ -106,8 +111,8 @@ class SuiteLoader {
   }
 }
 
-bool _hasHookAfterAll(List<InstanceMirror> metadata) {
-  return metadata.any((i) => i.reflectee == afterAll);
+bool _hasAnnotation(List<InstanceMirror> metadata, dynamic type) {
+  return metadata.any((i) => i.reflectee == type);
 }
 
 String _getMatcherAnnotation(List<InstanceMirror> metadata) {

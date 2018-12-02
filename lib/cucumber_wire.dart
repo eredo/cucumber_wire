@@ -17,4 +17,6 @@ import 'src/frontend/frontend.dart';
 export 'src/frontend/frontend.dart' show registerStepDefinitions, expect;
 export 'src/frontend/annotations.dart';
 export 'src/frontend/suite_loader.dart' show SuitePlugin;
+export 'src/frontend/expect.dart';
+
 export 'package:matcher/matcher.dart';
