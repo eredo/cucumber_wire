@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../frontend/registry.dart';
+import '../frontend/step_definition.dart';
 
 /// Typed definition of the messages transmitted between cucumber server, the
 /// cucumber_wire dart server and the dart step definition.
@@ -114,6 +115,10 @@ class ResultMessage implements WireMessage {
   ResultMessage.success([this.args = const []]) : this.state = 'success';
   ResultMessage.pending([this.args = const []]) : this.state = 'pending';
 
+  factory ResultMessage.failWithException(dynamic ex) => ResultMessage.fail([
+        {'message': ex.toString(), 'exception': ex.runtimeType.toString()}
+      ]);
+
   @override
   List encode() {
     final res = <dynamic>[state];
@@ -150,6 +155,25 @@ class InternalFileMessage implements WireMessage {
   }
 }
 
+class InternalDefinitionList implements WireMessage {
+  static const String name = 'internal_definition_list';
+
+  List<StepDefinition> declarations = [];
+
+  @override
+  List encode() => [name]..addAll(declarations.map((d) => d.toJson()));
+
+  @override
+  String get identifier => name;
+
+  @override
+  void parse(List inputs) {
+    declarations = inputs
+        .map((o) => StepDefinition.fromJson(o as Map<String, dynamic>))
+        .toList();
+  }
+}
+
 /// Decodes the json [input] and tries to convert it into a [WireMessage] implementation.
 ///
 /// Throws [MessageParseException] if the message doesn't contain any elements
@@ -176,6 +200,9 @@ WireMessage parse(String input) {
       break;
     case InternalFileMessage.name:
       msg = InternalFileMessage();
+      break;
+    case InternalDefinitionList.name:
+      msg = InternalDefinitionList();
       break;
     case 'success':
     case 'fail':

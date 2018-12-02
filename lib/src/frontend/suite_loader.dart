@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 
 import 'registry.dart';
 import 'annotations.dart';
+import 'step_definition.dart';
 
 final _thenAnnotation = reflectClass(Then);
 final _givenAnnotation = reflectClass(Given);
@@ -53,7 +54,9 @@ class SuiteLoader {
           matcher,
           instanceMirror.type.simpleName.toString(),
           method.simpleName.toString(),
-          method.location.sourceUri.toString()));
+          method.location.sourceUri.toString() +
+              ':' +
+              method.location.line.toString()));
     }
 
     if (_hasAnnotation(method.metadata, afterAll)) {
@@ -143,28 +146,6 @@ String _getMatcherAnnotation(List<InstanceMirror> metadata) {
   }
 
   return annotation.getField(#matcher).reflectee as String;
-}
-
-class StepDefinition {
-  final String declaration;
-  final String scenario;
-  final String methodName;
-  final String location;
-
-  StepDefinition(
-      this.declaration, this.scenario, this.methodName, this.location);
-
-  @override
-  bool operator ==(other) {
-    if (other is StepDefinition) {
-      return declaration == other.declaration &&
-          scenario == other.scenario &&
-          methodName == other.methodName &&
-          location == other.location;
-    }
-
-    return false;
-  }
 }
 
 abstract class SuitePlugin<T, R> {

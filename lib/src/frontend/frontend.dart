@@ -14,83 +14,64 @@ void registerStepDefinitions(SendPort output, List<Type> definitions,
   definitions.forEach(loader.load);
 
   output.send(input.sendPort);
-
   output.send(utf8.encode(json
       .encode((InternalFileMessage()..files = loader.detectFiles()).encode())));
 
-  input.listen((m) async {
-    if (m is List<int>) {
-      final msg = utf8.decode(m);
-      print('received in isolate: $msg');
-
-      WireMessage message;
-      try {
-        message = parse(msg);
-      } catch (ex) {
-        print('unable to parse message: $ex');
-      }
-
-      if (message is BeginScenario) {
-        output.send(utf8.encode(json.encode(ResultMessage.success().encode())));
-      }
-
-      if (message is StepMatches) {
-        print('lookup step: ${message.nameToMatch}');
-
-        final step = _registry.lookup(message.nameToMatch);
-        if (step != null) {
-          print('step matched');
-          final msg = ResultMessage.success([
-            [
-              {
-                'id': step.id.toString(),
-                'args': step
-                    .detectArgs(message.nameToMatch)
-                    .map((s) => {'val': s.value, 'pos': s.position})
-                    .toList()
-              }
-            ]
-          ]);
-          output.send(utf8.encode(json.encode(msg.encode())));
-          return;
+  input
+      .where((m) => m is List<int>)
+      .cast<List<int>>()
+      .transform(utf8.decoder)
+      .map(parse)
+      .asyncMap((message) async {
+        if (message is BeginScenario) {
+          await _registry.start();
+          return ResultMessage.success();
         }
 
-        print('lookup not found');
-        output.send(utf8.encode(json.encode(ResultMessage.fail().encode())));
-      }
+        if (message is StepMatches) {
+          final step = _registry.lookup(message.nameToMatch);
+          if (step != null) {
+            return ResultMessage.success([
+              [
+                {
+                  'id': step.id.toString(),
+                  'args': step
+                      .detectArgs(message.nameToMatch)
+                      .map((s) => {'val': s.value, 'pos': s.position})
+                      .toList()
+                }
+              ]
+            ]);
+          }
+        }
 
-      if (message is Invoke) {
-        WireMessage result;
-        try {
-          print('invoke with id: ${message.invokeId}');
+        if (message is Invoke) {
           await _registry.execute(message.invokeId, message.args);
-          print('success');
-          result = ResultMessage.success();
-        } catch (ex) {
-          print('failed: $ex');
-          result = ResultMessage.fail([
-            {'message': ex.toString(), 'exception': ex.runtimeType.toString()}
-          ]);
-          print('send invoke output');
+          return ResultMessage.success();
         }
 
-        output.send(utf8.encode(json.encode(result.encode())));
-      }
-
-      if (message is EndScenario) {
-        WireMessage result;
-
-        try {
+        if (message is EndScenario) {
           await _registry.end();
-          result = ResultMessage.success();
-        } catch (ex) {
-          result = ResultMessage.fail([
-            {'message': ex.toString(), 'exception': ex.runtimeType.toString()}
-          ]);
+          return ResultMessage.success();
         }
 
-        output.send(utf8.encode(json.encode(result.encode())));
-      }
-    }
-  });
+        if (message is InternalDefinitionList) {
+          return InternalDefinitionList()
+            ..declarations = loader.definitions.toList();
+        }
+
+        return ResultMessage.failWithException(
+            Exception('Unknown message send'));
+      })
+      .map((r) => json.encode(r.encode()))
+      .transform(utf8.encoder)
+      .listen(
+        output.send,
+        onError: (err, stackTrace) {
+          print('Error in isolate: $err\n$stackTrace');
+          output.send(utf8.encode(
+              json.encode(ResultMessage.failWithException(err).encode())));
+        },
+        cancelOnError: false,
+      );
 }
