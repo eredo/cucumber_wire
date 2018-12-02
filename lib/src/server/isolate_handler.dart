@@ -95,8 +95,7 @@ class IsolateHandler implements Sink<WireMessage> {
   }
 
   void _startIsolate() async {
-    _isolate = await Isolate.spawnUri(path, [], _setupReceivePort.sendPort,
-        environment: Platform.environment);
+    _isolate = await Isolate.spawnUri(path, [], _setupReceivePort.sendPort);
   }
 
   void _closeIsolate() {
