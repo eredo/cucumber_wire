@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:mirrors';
 
 import 'package:meta/meta.dart';
@@ -62,7 +63,7 @@ class SuiteLoader {
 
   @visibleForTesting
   FrontendCallback setup(InstanceMirror instance, MethodMirror mirr) {
-    return (List<dynamic> args) {
+    return (List<dynamic> args) async {
       final passedArgs = <dynamic>[];
       for (int i = 0; i < args.length; i++) {
         if (i >= mirr.parameters.length) {
@@ -106,7 +107,15 @@ class SuiteLoader {
         }
       }
 
-      return instance.invoke(mirr.simpleName, passedArgs);
+      try {
+        final result = instance.invoke(mirr.simpleName, passedArgs);
+        if (result.reflectee is Future) {
+          await result.reflectee;
+        }
+      } catch (ex) {
+        print('error on execution: $ex');
+        rethrow;
+      }
     };
   }
 }
