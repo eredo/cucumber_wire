@@ -21,6 +21,7 @@ final _boolMatch = reflectClass(bool);
 class SuiteLoader {
   final Registry registry;
   final List<SuitePlugin> plugins;
+  final Set<StepDefinition> definitions = Set<StepDefinition>();
 
   SuiteLoader(this.registry, [this.plugins]);
 
@@ -48,6 +49,11 @@ class SuiteLoader {
     final matcher = _getMatcherAnnotation(method.metadata);
     if (matcher != null) {
       registry.register(matcher, setup(instanceMirror, method));
+      definitions.add(StepDefinition(
+          matcher,
+          instanceMirror.type.simpleName.toString(),
+          method.simpleName.toString(),
+          method.location.sourceUri.toString()));
     }
 
     if (_hasAnnotation(method.metadata, afterAll)) {
@@ -120,9 +126,8 @@ class SuiteLoader {
   }
 }
 
-bool _hasAnnotation(List<InstanceMirror> metadata, dynamic type) {
-  return metadata.any((i) => i.reflectee == type);
-}
+bool _hasAnnotation(List<InstanceMirror> metadata, dynamic type) =>
+    metadata.any((i) => i.reflectee == type);
 
 String _getMatcherAnnotation(List<InstanceMirror> metadata) {
   final annotation = metadata.firstWhere(
@@ -138,6 +143,28 @@ String _getMatcherAnnotation(List<InstanceMirror> metadata) {
   }
 
   return annotation.getField(#matcher).reflectee as String;
+}
+
+class StepDefinition {
+  final String declaration;
+  final String scenario;
+  final String methodName;
+  final String location;
+
+  StepDefinition(
+      this.declaration, this.scenario, this.methodName, this.location);
+
+  @override
+  bool operator ==(other) {
+    if (other is StepDefinition) {
+      return declaration == other.declaration &&
+          scenario == other.scenario &&
+          methodName == other.methodName &&
+          location == other.location;
+    }
+
+    return false;
+  }
 }
 
 abstract class SuitePlugin<T, R> {

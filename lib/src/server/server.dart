@@ -41,11 +41,18 @@ class Server {
   /// isolate is started successfully for the first time.
   Future<void> start() async {
     // Start the isolate and wait for a first successful start.
-    _isolate = IsolateHandler(
-      Uri.parse(configuration.entryPoint),
-      watch: configuration.liveReload,
-    );
-    await _isolate.onStart.first;
+    try {
+      _isolate = IsolateHandler(
+        Uri.parse(configuration.entryPoint),
+        watch: configuration.liveReload,
+      );
+
+      await _isolate.onStart.first;
+    } catch (ex) {
+      _logger.stderr('Unable to start isolate, please fix definition files'
+          ' before starting the server again:\n$ex');
+      rethrow;
+    }
     _logger.stdout('Step definitions loaded.');
 
     // Forward message from WireServer to IsolateHandler
@@ -60,13 +67,22 @@ class Server {
     _isolate.onMessage.listen(_server.add, onError: (err, stack) {
       _logger.stderr('Error within isolate: $err\nStacktrace: $stack');
     });
+    _isolate.onStart.listen((_) {
+      _logger.stdout('Step definitions reloaded.');
+    }, onError: (ex) {
+      _logger.stderr('Unable to reload step functions:\n$ex');
+    }, cancelOnError: false);
 
     // Start the server.
     await _server.start();
     _logger.stdout('Server running: ${_server.address}:${_server.port}');
 
     if (configuration.runCucumber) {
-      _isolateStartListener = _isolate.onStart.listen((_) => _runCucumber());
+      _isolateStartListener = _isolate.onStart.listen(
+        (_) => _runCucumber(),
+        onError: (_) {},
+        cancelOnError: false,
+      );
       _runCucumber();
     }
   }

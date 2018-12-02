@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:isolate';
 
 import 'package:watcher/watcher.dart';
@@ -95,7 +94,11 @@ class IsolateHandler implements Sink<WireMessage> {
   }
 
   void _startIsolate() async {
-    _isolate = await Isolate.spawnUri(path, [], _setupReceivePort.sendPort);
+    try {
+      _isolate = await Isolate.spawnUri(path, [], _setupReceivePort.sendPort);
+    } catch (ex) {
+      _start.addError(ex);
+    }
   }
 
   void _closeIsolate() {

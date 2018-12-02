@@ -39,7 +39,7 @@ class StepRegistry implements Registry {
   }
 
   /// Executes all registered beforeAll functionality.
-  FutureOr<void> start() => Future.wait(_afterAll.map((fn) async {
+  FutureOr<void> start() => Future.wait(_beforeAll.map((fn) async {
         await fn();
       }));
 
