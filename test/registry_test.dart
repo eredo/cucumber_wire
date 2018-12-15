@@ -1,6 +1,5 @@
-import 'package:test/test.dart';
-
 import 'package:cucumber_wire/src/frontend/registry.dart';
+import 'package:test/test.dart';
 
 void main() {
   final fn = (List<dynamic> args) {
@@ -21,6 +20,60 @@ void main() {
       final step = registry.lookup('I should see something');
 
       expect(step, isNotNull);
+    });
+
+    test('should support {string} lookup', () {
+      registry.register('I want to see {string} value', fn);
+      expect(registry.lookup('I want to see "test" value'), isNotNull);
+      expect(registry.lookup('I want to see test value'), isNull);
+      expect(registry.lookup('I want to see \'test\' value'), isNotNull);
+      expect(registry.lookup('I want to see \'test str\' value'), isNotNull);
+      expect(
+          registry.lookup('I want to see \'test str 192\' value'), isNotNull);
+    });
+
+    test('should support {int} lookup', () {
+      registry.register('I want to see {int} value', fn);
+      expect(registry.lookup('I want to see 1 value'), isNotNull);
+      expect(registry.lookup('I want to see -1 value'), isNotNull);
+      expect(registry.lookup('I want to see +1 value'), isNotNull);
+      expect(registry.lookup('I want to see 123 value'), isNotNull);
+      expect(registry.lookup('I want to see t1 value'), isNull);
+      expect(registry.lookup('I want to see 1.1 value'), isNull);
+      expect(registry.lookup('I want to see A value'), isNull);
+    });
+
+    test('should support {float} lookup', () {
+      registry.register('I want to see {float} value', fn);
+      expect(registry.lookup('I want to see 1.1 value'), isNotNull);
+      expect(registry.lookup('I want to see 0.1 value'), isNotNull);
+      expect(registry.lookup('I want to see -0.1 value'), isNotNull);
+      expect(registry.lookup('I want to see +0.1 value'), isNotNull);
+      expect(registry.lookup('I want to see 1 value'), isNotNull);
+      expect(registry.lookup('I want to see A value'), isNull);
+      expect(registry.lookup('I want to see A1 value'), isNull);
+    });
+
+    test('should support {word} lookup', () {
+      registry.register('I want to see {word} value', fn);
+      expect(registry.lookup('I want to see test value'), isNotNull);
+      expect(registry.lookup('I want to see 1 value'), isNotNull);
+      expect(registry.lookup('I want to see a1 value'), isNotNull);
+      expect(registry.lookup('I want to see B1 value'), isNotNull);
+      expect(registry.lookup('I want to see B value'), isNotNull);
+      expect(registry.lookup('I want to see A t value'), isNull);
+      expect(registry.lookup('I want to see test 1 value'), isNull);
+    });
+
+    test('should support {} lookup', () {
+      registry.register('I want to see {} value', fn);
+      expect(registry.lookup('I want to see test value'), isNotNull);
+      expect(registry.lookup('I want to see 1 value'), isNotNull);
+      expect(registry.lookup('I want to see a1 value'), isNotNull);
+      expect(registry.lookup('I want to see B1 value'), isNotNull);
+      expect(registry.lookup('I want to see B value'), isNotNull);
+      expect(registry.lookup('I want to see test blub value'), isNotNull);
+      expect(registry.lookup('I want to see "test ?blub value'), isNotNull);
     });
   });
 

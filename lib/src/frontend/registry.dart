@@ -18,7 +18,14 @@ class StepRegistry implements Registry {
   int _id = 0;
 
   void register(String matcher, FrontendCallback callback) {
-    final step = Step(RegExp('^$matcher'), callback, _id++);
+    final matcherExp = matcher
+        .replaceAll('{string}', '["|\']([A-Za-z0-9.\\s]+)["|\']')
+        .replaceAll('{int}', r'([\-\+0-9]+)')
+        .replaceAll('{float}', r'([\+\-0-9\.]+)')
+        .replaceAll('{word}', r'([A-Za-z0-9\_\-]+)')
+        .replaceAll('{}', '(.*)');
+
+    final step = Step(RegExp('^$matcherExp'), callback, _id++);
     _steps[step.id] = step;
   }
 

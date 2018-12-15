@@ -106,6 +106,19 @@ class TestScenario {
 }
 ```
 
+## Parameter types
+
+It's not necessary to always write matchers as regular expression. The built-in parameter types of cucumber are supported
+as well:
+
+| Parameter type | Description | Regular expression |
+| -------------- | ----------- | ------------------ |
+| `{int}` | Matches integers, for example `71` or `-19`. | `([\-\+0-9]+)` |
+| `{float}` | Matches floats, for example `3.6`, `.8` or `-9.2`. | `([\+\-0-9\.]+)` |
+| `{word}` | Matches words without whitespace, for example `banana` (but not `banana split`) | `([A-Za-z0-9\_\-]+)` |
+| `{string} ` | Matches single-quoted or double-quoted strings, for example `"banana split"` or `'banana split'` (but not `banana split`). Only the text between the quotes will be extracted. The quotes themselves are discarded. | `["|']([A-Za-z0-9.\\s]+)["|']` |
+| `{}` | Matches anything. | `(.*)` |
+
 ## Current implementation of worlds
 
 Currently worlds should be defined as `abstract class` and shared across scenarios using inheritance. If variables of
