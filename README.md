@@ -1,6 +1,6 @@
 # cucumber_wire
 
-An implementation of cucumber using the cucumber wire protocol.
+An implementation of cucumber using the [cucumber wire protocol](https://github.com/cucumber/cucumber/wiki/Wire-Protocol).
 
 ## Usage
 
@@ -178,21 +178,6 @@ class TestScenario {
 class TestWorld {}
 ```
 
-## Passing environment variables
-
-Environment variables can be passed to the server when starting it like this:
-
-```
-USERNAME=mysecret pub run cucumber_wire
-```
-
-Then they can be accessed within the dart step definitions using the `.fromEnvironment` methods provided for several 
-build in types in dart, for example a [String](https://api.dartlang.org/stable/2.1.0/dart-core/String/String.fromEnvironment.html):
-
-```dart
-final username = String.fromEnvironment('USERNAME');
-```
-
 ## Plugins
 
 Plugins help to provide further details to a step definition method and do steps before executing the method. Plugins
@@ -266,6 +251,23 @@ class TestScenario extends Driver {
 
 ## How it works
 
+This package is using the [cucumber wire protocol](https://github.com/cucumber/cucumber/wiki/Wire-Protocol) to support
+a dart implementation of cucumber. Therefore a TCP server is started which listens for instructions provided by cucumber
+when it's started using a `.wire` configuration file within the `step_definitions` folder. The dart process which starts
+the TCP server also spawns an isolate with the given path to the step definitions dart implementation. 
+
+The isolate uses reflection to detect all step definitions (`@Given`, `@Then`, `@When`, `@And`, `@after`, ...) which are 
+defined within scenarios passed to `registerStepDefinitions` within the `main` function. Because the step definition dart 
+file is spawned using an isolate it receives a `SendPort` as the second argument to the `main` function, which is passed
+to `registerStepDefinitions` which is responsible for the communication between the isolate and parent dart isolate 
+which spawned the TCP server.
+
+When the TCP server receives instructions from the `cucumber` client it forwards them to the isolate which either:
+- Looks up if the definition exists, which arguments are provided and returns a proper identifier for the method
+- Executes a definition by it's previously provided identifier and the given arguments
+- Executes a hook (`@afterAll`, `@beforeAll`, `@before`, `@after`)
+
+The implementation which spawns the isolate comes with some features, like change detection and reloading of the isolate.
 
 ## Known issues
 
