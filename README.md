@@ -1,5 +1,9 @@
 # cucumber_wire
 
+[![Pub Version](https://img.shields.io/pub/v/cucumber_wire.svg)](https://pub.dartlang.org/packages/cucumber_wire)
+[![Build Status](https://travis-ci.org/eredo/cucumber_wire.svg?branch=master)](https://travis-ci.org/eredo/cucumber_wire)
+[![Coverage Status](https://coveralls.io/repos/github/eredo/cucumber_wire/badge.svg)](https://coveralls.io/github/eredo/cucumber_wire)
+
 An implementation of cucumber using the [cucumber wire protocol](https://github.com/cucumber/cucumber/wiki/Wire-Protocol).
 
 ## Usage
