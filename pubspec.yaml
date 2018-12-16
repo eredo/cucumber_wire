@@ -14,3 +14,5 @@ dependencies:
 
 dev_dependencies:
   mockito: ^3.0.0
+  dart_coveralls: ^0.6.0
+  pedantic: ^1.1.0
