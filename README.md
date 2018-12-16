@@ -262,6 +262,32 @@ class TestScenario extends Driver {
 }
 ```
 
+## Tools
+
+### Add definition
+
+This tool generates the step definition method code based on a provided sentence.
+
+```
+Usage: pub run cucumber_wire:add_definition [options] "<sentence>" [target_file] [target_line]
+
+Where <sentence> needs to start with either Given, And, Then or When.
+
+
+-a, --[no-]async    Defines that the step definition should be asynchronous
+-h, --[no-]help     Shows this usage message.
+```
+
+Define it as an [external tool within intellij](https://www.jetbrains.com/help/idea/settings-tools-external-tools.html) 
+to enable a smooth experience directly in the IDE.
+
+![settings tool](docs/assets/screen_tool.png?raw=true)
+
+![settings tool async](docs/assets/screen_tool_async.png?raw=true)
+
+![usage tool](docs/assets/screen_usage.gif?raw=true)
+
+
 ## How it works
 
 This package is using the [cucumber wire protocol](https://github.com/cucumber/cucumber/wiki/Wire-Protocol) to support
