@@ -15,14 +15,15 @@ void main() {
       client.add(utf8.encode(msg));
     }
 
-    setUp(() async {
+    setUpAll(() async {
       server = WireServer();
       await server.start();
 
       client = await Socket.connect(server.address, server.port);
     });
 
-    tearDown(() async {
+    tearDownAll(() async {
+      await client.close();
       await server.close();
     });
 

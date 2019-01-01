@@ -12,6 +12,7 @@ import 'isolate_handler.dart';
 class WireServer implements Sink<WireMessage> {
   final _messages = StreamController<WireMessage>.broadcast();
   final _input = StreamController<WireMessage>.broadcast();
+  final _sockets = <Socket>[];
 
   final String address;
   final int port;
@@ -32,6 +33,7 @@ class WireServer implements Sink<WireMessage> {
           // socket. This is closed when the socket disconnects.
           StreamSubscription<List<int>> inputListener;
 
+          _sockets.add(socket);
           socket
               .transform(utf8.decoder)
               .where((s) => s.isNotEmpty && s[0] == '[')
@@ -39,6 +41,7 @@ class WireServer implements Sink<WireMessage> {
               .listen((msg) {
             _messages.add(msg);
           }, onDone: () {
+            _sockets.remove(socket);
             inputListener.cancel();
             inputListener = null;
           });
@@ -58,7 +61,11 @@ class WireServer implements Sink<WireMessage> {
     });
   }
 
-  Future<void> close() => _serverSocket.close();
+  Future<void> close() {
+    final sockets = []..addAll(_sockets);
+    sockets.forEach((s) => s.destroy());
+    return _serverSocket.close();
+  }
 
   @override
   void add(WireMessage data) => _input.add(data);
