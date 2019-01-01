@@ -285,11 +285,11 @@ Where <sentence> needs to start with either Given, And, Then or When.
 Define it as an [external tool within intellij](https://www.jetbrains.com/help/idea/settings-tools-external-tools.html) 
 to enable a smooth experience directly in the IDE.
 
-![settings tool](docs/assets/screen_tool.png?raw=true)
+![settings tool](doc/assets/screen_tool.png?raw=true)
 
-![settings tool async](docs/assets/screen_tool_async.png?raw=true)
+![settings tool async](doc/assets/screen_tool_async.png?raw=true)
 
-![usage tool](docs/assets/screen_usage.gif?raw=true)
+![usage tool](doc/assets/screen_usage.gif?raw=true)
 
 
 ## How it works
