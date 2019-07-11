@@ -65,8 +65,9 @@ void main(List<String> args) async {
       exit(3);
     }
 
-    final lineStream =
-        file.openRead().transform(utf8.decoder).transform(LineSplitter());
+    final lineStream = utf8.decoder
+        .bind(file.openRead())
+        .transform(LineSplitter());
     final targetLine = int.tryParse(argResult.rest[2]);
     if (targetLine == null) {
       print('Provide a valid line number as third argument.');
